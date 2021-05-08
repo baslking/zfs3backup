@@ -2,7 +2,7 @@
  -->
 This was forked from https://github.com/mmontagna/zfs3backup which was forked from https://github.com/Presslabs/z3 which appears to be a dead project.
 
-# Notabe changes:
+# Notable changes:
 * Ported to Python >= 3.6, after all Python 2 is really no longer supported
 * Added an ENDPOINT option in the configuration so that not AWS S3 providers will work
 * Began work on more complete error handling since broken pipes, bad credentials and insufficient privileges are not handled
