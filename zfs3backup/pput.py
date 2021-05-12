@@ -80,7 +80,6 @@ class StreamHandler(object):
         """Return complete chunks or None if EOF reached"""
         while not self._eof_reached:
             read = self.input_stream.read(self.chunk_size - len(self._partial_chunk))
-            print(len(read))
             if len(read) == 0:
                 self._eof_reached = True
             self._partial_chunk += read
@@ -124,7 +123,6 @@ class UploadWorker(object):
     @retry()
     def upload_part(self, index, chunk):
         md5 = hashlib.md5(chunk)
-        # print(base64.b64encode(md5.digest()).decode())
         part = s3.MultipartUploadPart(
             self.multipart.bucket_name,
             self.multipart.object_key,
@@ -152,7 +150,7 @@ class UploadWorker(object):
         while True:
             index, chunk = self.inbox.get()
             md5, etag = self.upload_part(index, chunk)
-            print ("worker loop i:{} md5:{}".format(index, md5))
+            #print ("worker loop i:{} md5:{}".format(index, md5))
             self.outbox.put(Result(
                 success=True,
                 md5=md5,
@@ -293,9 +291,9 @@ def parse_metadata(metadata):
 
 def optimize_chunksize(estimated):
     max_parts = 9999  # S3 requires part indexes to be between 1 and 10000
-    # part size has to be at least 5MB
+    # part size has to be at least 5MB  (BK I pumped this up to 25MB and dropped the concurrency)
     estimated = estimated * 1.05  # just to be on the safe side overesimate the total size to upload
-    min_part_size = max(estimated / max_parts, 5*1024*1024)
+    min_part_size = max(estimated / max_parts, 25*1024*1024)
     return int(min_part_size)
 
 
@@ -352,6 +350,7 @@ def main():
         chunk_size = optimize_chunksize(parse_size(args.estimated))
     else:
         chunk_size = parse_size(args.chunk_size)
+    print(f'<Chosen chunk size is {chunk_size}>')
     stream_handler = StreamHandler(input_fd, chunk_size=chunk_size)
 
     bucket = s3.Bucket(CFG['BUCKET'])
