@@ -50,7 +50,7 @@ def multipart_etag(digests):
     for dig in digests:
         count += 1
         etag.update(binascii.a2b_hex(dig))
-    return '"{}-{}"'.format(etag.hexdigest(), count)
+    return f"'{etag.hexdigest()}-{count}'"
 
 
 def parse_size(size):
@@ -105,8 +105,7 @@ def retry(times=int(CFG['MAX_RETRIES'])):
                 except:  # pylint: disable=bare-except
                     if attempt >= times:
                         raise
-                    logging.exception('Failed to upload part attempt {} of {}'.format(
-                        attempt, times))
+                    logging.exception(f"Failed to upload part attempt {attempt} of {times}")
         return wrapped
     return decorator
 
@@ -154,7 +153,6 @@ class UploadWorker(object):
         while True:
             index, chunk = self.inbox.get()
             md5, etag = self.upload_part(index, chunk)
-            #print ("worker loop i:{} md5:{}".format(index, md5))
             self.outbox.put(Result(
                 success=True,
                 md5=md5,
@@ -232,7 +230,7 @@ class UploadSupervisor(object):
         result = self.inbox.get()
         if result.success:
             if self._verbosity >= VERB_PROGRESS:
-                sys.stderr.write("\nuploaded chunk {} \n".format(result.index))
+                sys.stderr.write(f"\nuploaded chunk {result.index} \n")
             self.results.append((result.index, result.md5, result.etag))
             self._pending_chunks -= 1
         else:
@@ -286,8 +284,7 @@ def parse_metadata(metadata):
         try:
             key, val = meta.split('=', 1)
         except ValueError:
-            sys.stderr.write(
-                "malformed metadata '{}'; should be key=value\n".format(meta))
+            sys.stderr.write(f"malformed metadata '{meta}'; should be key=value\n")
             sys.exit(1)
         headers[key] = val
     return headers
@@ -332,7 +329,7 @@ def parse_args():
                         action='append',
                         dest='metadata',
                         default=list(),
-                        help='Metatada in key=value format')
+                        help='Metatada in key=value form')
     parser.add_argument('--storage-class', default=CFG['S3_STORAGE_CLASS'],
                         dest='storage_class', help='The S3 storage class. Defaults to STANDARD_IA.')
     quiet_group = parser.add_mutually_exclusive_group()
@@ -354,7 +351,6 @@ def main():
         chunk_size = optimize_chunksize(parse_size(args.estimated))
     else:
         chunk_size = parse_size(args.chunk_size)
-    print(f'<Chosen chunk size is {chunk_size}>')
     stream_handler = StreamHandler(input_fd, chunk_size=chunk_size)
 
     bucket = s3.Bucket(CFG['BUCKET'])
@@ -373,12 +369,12 @@ def main():
         metadata=metadata
     )
     if verbosity >= VERB_NORMAL:
-        sys.stderr.write("starting upload to {}/{} with chunksize {}M using {} workers\n".format(
-            CFG['BUCKET'], args.name, (chunk_size/(1024*1024.0)), args.concurrency))
+        sys.stderr.write(f"starting upload to {CFG['BUCKET']}/{args.name} with chunksize"
+                         f" {(chunk_size/(1024*1024.0))}M using {args.concurrency} workers\n")
     try:
         etag = sup.main_loop(concurrency=args.concurrency)
     except UploadException as excp:
-        sys.stderr.write("{}\n".format(excp))
+        sys.stderr.write(f"{excp}\n")
         return 1
     if verbosity >= VERB_NORMAL:
         print(json.dumps({'status': 'success', 'etag': etag}))

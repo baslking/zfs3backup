@@ -312,7 +312,7 @@ class PairManager(object):
         else:
             z_snap = self.zfs_manager.get(snap_name)
             if z_snap is None:
-                raise Exception('Failed to get the snapshot {}'.format(snap_name))
+                raise Exception(f"Failed to get the snapshot {snap_name}")
         return z_snap
 
     @staticmethod
@@ -331,7 +331,7 @@ class PairManager(object):
         if compressor is None:
             return cmd
         compress_cmd = compressor['compress']
-        return "{} | {}".format(compress_cmd, cmd)
+        return f"{compress_cmd} | {cmd}"
 
     def _decompress(self, cmd, s3_snap):
         """Adds the appropriate command to decompress the zfs stream
@@ -341,27 +341,24 @@ class PairManager(object):
         if compressor is None:
             return cmd
         decompress_cmd = compressor['decompress']
-        return "{} | {}".format(decompress_cmd, cmd)
+        return f"{decompress_cmd} | {cmd}"
 
     def _pput_cmd(self, estimated, s3_prefix, snap_name, parent=None):
-        meta = ['size={}'.format(estimated)]
+        meta = [f"size={estimated}"]
         if parent is None:
             meta.append("isfull=true")
         else:
-            meta.append("parent={}".format(parent))
+            meta.append("parent={parent}")
         if self.compressor is not None:
-            meta.append("compressor={}".format(self.compressor))
-        return "pput --quiet --estimated {estimated} {meta} {prefix}{name}".format(
-            estimated=estimated, prefix=s3_prefix, name=snap_name,
-            meta=" ".join(("--meta " + m) for m in meta))
+            meta.append(f"compressor={self.compressor}")
+        return f"pput --quiet --estimated {estimated} {' '.join('--meta '+m for m in meta)} {s3_prefix}{snap_name}"
 
     def backup_full(self, snap_name=None, dry_run=False):
         """Do a full backup of a snapshot. By default latest local snapshot"""
         z_snap = self._snapshot_to_backup(snap_name)
         estimated_size = self._parse_estimated_size(
             self._cmd.shell(f'zfs send -nvP {z_snap.name}',capture=True))
-        self._cmd.pipe(
-            "zfs send '{}'".format(z_snap.name),
+        self._cmd.pipe(f"zfs send '{z_snap.name}'",
             self._compress(
                 self._pput_cmd(
                     estimated=estimated_size,
@@ -387,9 +384,7 @@ class PairManager(object):
                 if not s3_snap.is_healthy:
                     # abort everything if we run in to unhealthy snapshots
                     raise IntegrityError(
-                        "Broken snapshot detected {}, reason: '{}'".format(
-                            s3_snap.name, s3_snap.reason_broken
-                        ))
+                        "Broken snapshot detected {s3_snap.name}, reason: '{s3_snap.reason_broken}'")
                 break
             to_upload.append(current)
             if current.parent is None:
@@ -400,23 +395,17 @@ class PairManager(object):
             print(z_snap)
             estimated_size = self._parse_estimated_size(
                 self._cmd.shell(
-                    "zfs send -nvP -i '{}' '{}'".format(
-                        z_snap.parent.name, z_snap.name),
+                    f"zfs send -nvP -i '{z_snap.parent.name}' '{z_snap.name}'",
                     capture=True))
-            self._cmd.pipe(
-
-                "zfs send -i '{}' '{}'".format(
-                    z_snap.parent.name, z_snap.name),
+            self._cmd.pipe(f"zfs send -i '{z_snap.parent.name}' '{z_snap.name}'",
                 self._compress(
                     self._pput_cmd(
                         estimated=estimated_size,
                         parent=z_snap.parent.name,
                         s3_prefix=self.s3_manager.s3_prefix,
-                        snap_name=z_snap.name)
-                ),
-                dry_run=dry_run,
-                estimated_size=estimated_size,
-            )
+                        snap_name=z_snap.name)),
+                        dry_run=dry_run,
+                        estimated_size=estimated_size)
             uploaded_meta.append({'snap_name': z_snap.name, 'size': estimated_size})
         return uploaded_meta
 
@@ -427,7 +416,7 @@ class PairManager(object):
             return
         current_snap = self.s3_manager.get(snap_name)
         if current_snap is None:
-            raise Exception('no such snapshot "{}"'.format(snap_name))
+            raise Exception(f"no such snapshot '{snap_name}'")
         to_restore = []
         while True:
             z_snap = self.zfs_manager.get(current_snap.name)
@@ -436,9 +425,7 @@ class PairManager(object):
                 break
             if not current_snap.is_healthy:
                 raise IntegrityError(
-                    "Broken snapshot detected {}, reason: '{}'".format(
-                        current_snap.name, current_snap.reason_broken
-                    ))
+                    f"Broken snapshot detected {current_snap.name}, reason: '{current_snap.reason_broken}'")
             to_restore.append(current_snap)
             if current_snap.is_full:
                 break
@@ -446,17 +433,10 @@ class PairManager(object):
                 current_snap = current_snap.parent
         force = '-F ' if force is True else ''
         for s3_snap in reversed(to_restore):
-            self._cmd.pipe(
-                "zfs3backup_get {}".format(
-                    os.path.join(self.s3_manager.s3_prefix, s3_snap.name)),
-                self._decompress(
-                    cmd="zfs recv {force}{snap}".format(
-                        force=force, snap=s3_snap.name),
-                    s3_snap=s3_snap,
-                ),
-                dry_run=dry_run,
-                estimated_size=s3_snap.size,
-            )
+            self._cmd.pipe(f"zfs3backup_get {os.path.join(self.s3_manager.s3_prefix, s3_snap.name)}",
+                           self._decompress(cmd=f"zfs recv {force}{s3_snap.name}",
+                           s3_snap=s3_snap,),dry_run=dry_run,
+                           estimated_size=s3_snap.size,)
 
 
 def _humanize(size):
@@ -466,14 +446,14 @@ def _humanize(size):
     while size > 1024 and unit_index < (len(units) - 1):
         size = size / 1024
         unit_index += 1
-    size = "{:.2f}".format(size)
+    size = f"{size:.2f}"
     size = size.rstrip('0').rstrip('.')
-    return "{} {}".format(size, units[unit_index])
+    return f"{size} {units[unit_index]}"
 
 
 def _get_widths(widths, line):
     for index, value in enumerate(line):
-        widths[index] = max(widths[index], len("{}".format(value)))
+        widths[index] = max(widths[index], len(f"{value}"))
     return widths
 
 
@@ -516,11 +496,11 @@ def list_snapshots(bucket, s3_prefix, filesystem, snapshot_prefix):
 
 
 def do_backup(bucket, s3_prefix, filesystem, snapshot_prefix, full, snapshot, compressor, dry, parseable):
-    prefix = "{}@{}".format(filesystem, snapshot_prefix)
+    prefix = f"{filesystem}@{snapshot_prefix}"
     s3_mgr = S3SnapshotManager(bucket, s3_prefix=s3_prefix, snapshot_prefix=prefix)
     zfs_mgr = ZFSSnapshotManager(fs_name=filesystem, snapshot_prefix=snapshot_prefix)
     pair_manager = PairManager(s3_mgr, zfs_mgr, compressor=compressor)
-    snap_name = "{}@{}".format(filesystem, snapshot) if snapshot else None
+    snap_name = f"{filesystem}@{snapshot}" if snapshot else None
     if full is True:
         uploaded = pair_manager.backup_full(snap_name=snap_name, dry_run=dry)
     else:
@@ -529,16 +509,15 @@ def do_backup(bucket, s3_prefix, filesystem, snapshot_prefix, full, snapshot, co
         if parseable:
             print("{snap_name}\x00{size}".format(**meta))
         else:
-            print("Successfuly backed up {}: {}.".format(
-                meta['snap_name'], _humanize(meta['size'])))
+            print(f"Successfuly backed up {meta['snap_name']}: {_humanize(meta['size'])}")
 
 
 def restore(bucket, s3_prefix, filesystem, snapshot_prefix, snapshot, dry, force):
-    prefix = "{}@{}".format(filesystem, snapshot_prefix)
+    prefix = "{filesystem}@{snapshot_prefix}"
     s3_mgr = S3SnapshotManager(bucket, s3_prefix=s3_prefix, snapshot_prefix=prefix)
     zfs_mgr = ZFSSnapshotManager(fs_name=filesystem, snapshot_prefix=snapshot_prefix)
     pair_manager = PairManager(s3_mgr, zfs_mgr)
-    snap_name = "{}@{}".format(filesystem, snapshot)
+    snap_name = "{filesystem}@{snapshot}"
     pair_manager.restore(snap_name, dry_run=dry, force=force)
 
 

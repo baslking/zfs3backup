@@ -9,16 +9,15 @@ from zfs3backup.config import get_config
 def cleanup_multipart(bucket, max_days=1, dry_run=False):
     max_age_seconds = max_days * 24 * 3600
     now = datetime.utcnow()
-    fmt = "{} | {:30} | {:20}"
-    print fmt.format("A", "key", "initiated")
+    print(f"{'A'} | {'key':30} | {'initiated':20}")
     for multi in bucket.list_multipart_uploads():
         delta = now-boto.utils.parse_ts(multi.initiated)
         if delta.total_seconds() >= max_age_seconds:
-            print fmt.format("X", multi.key_name, multi.initiated)
+            print f"{'X'} | {multi.key_name:30} | {multi.initiated:20}"
             if not dry_run:
                 multi.cancel_upload()
         else:
-            print fmt.format(" ", multi.key_name, multi.initiated)
+            print f"{' '} | {multi.key_name:30} | {multi.initiated:20}"
 
 
 def main():
