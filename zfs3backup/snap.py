@@ -71,9 +71,9 @@ class S3Snapshot(object):
 
     def __repr__(self):
         if self.is_full:
-            return "<Snapshot {} [full]>".format(self.name)
+            return f"<Snapshot {elf.name} [full]>"
         else:
-            return "<Snapshot {} [{}]>".format(self.name, self.parent_name)
+            return f"<Snapshot {self.name} [{self.parent_name}]>"
 
     @property
     def is_full(self):
@@ -157,7 +157,7 @@ class ZFSSnapshot(object):
         self.parent = parent
 
     def __repr__(self):
-        return "<Snapshot {} [{}]>".format(self.name, self.parent.name if self.parent else '')
+        return f"<Snapshot {self.name} [{self.parent.name if self.parent else ''}]>"
 
 
 class ZFSSnapshotManager(object):
@@ -222,7 +222,7 @@ class ZFSSnapshotManager(object):
         for snap_name, data in fs_snaps.items():
             if not snap_name.startswith(self._snapshot_prefix):
                 continue
-            full_name = '{}@{}'.format(fs_name, snap_name)
+            full_name = f'{fs_name}@{snap_name}'
             zfs_snap = ZFSSnapshot(
                 full_name,
                 metadata=data,
@@ -245,9 +245,8 @@ class ZFSSnapshotManager(object):
         if len(self._snapshots) == 0:
             cfg = get_config()
             raise SoftError(
-                'Nothing to backup for filesystem "{}". Are you sure '
-                'SNAPSHOT_PREFIX="{}" is correct?'.format(
-                    cfg.get('FILESYSTEM'), cfg.get('SNAPSHOT_PREFIX')))
+                f"Nothing to backup for filesystem '{cfg.get('FILESYSTEM')}'. Are you sure"
+                 f"SNAPSHOT_PREFIX='{cfg.get('SNAPSHOT_PREFIX')}' is correct?")
         return list(self._snapshots.values())[-1]
 
     def get(self, name):
@@ -282,10 +281,10 @@ class CommandExecutor(object):
     def pipe(self, cmd1, cmd2, quiet=False, estimated_size=None, **kwa):
         """Executes commands"""
         if self.has_pv and not quiet:
-            pv = "pv" if estimated_size is None else "pv --size {}".format(estimated_size)
-            return self.shell("{} | {}| {}".format(cmd1, pv, cmd2), **kwa)
+            pv = "pv" if estimated_size is None else f"pv --size {estimated_size}"
+            return self.shell(f"{cmd1} | {pv}| {cmd2}", **kwa)
         else:
-            return self.shell("{} | {}".format(cmd1, cmd2), **kwa)
+            return self.shell("{cmd1} | {cmd2}", **kwa)
 
 
 class PairManager(object):
@@ -424,7 +423,7 @@ class PairManager(object):
     def restore(self, snap_name, dry_run=False, force=False):
         dataset, snapshot_tag = snap_name.split('@')
         if not force and self.zfs_manager.dataset_exists(dataset):
-            print("The dataset {} already exists locally if you'd like to overwrite it specify --force'".format(dataset))
+            print(f"The dataset: {dataset} already exists locally; if you choose to overwrite it specify '--force'")
             return
         current_snap = self.s3_manager.get(snap_name)
         if current_snap is None:
@@ -433,7 +432,7 @@ class PairManager(object):
         while True:
             z_snap = self.zfs_manager.get(current_snap.name)
             if z_snap is not None:
-                print("Snapshot already exists locally. If you'd like to rollback to it you can run 'zfs rollback {}'".format(current_snap.name))
+                print(f"Snapshot already exists locally. If you'd like to rollback to it you can run 'zfs rollback {current_snap.name}'")
                 break
             if not current_snap.is_healthy:
                 raise IntegrityError(
@@ -498,9 +497,8 @@ def _prepare_line(s3_snap, z_snap):
 
 
 def list_snapshots(bucket, s3_prefix, filesystem, snapshot_prefix):
-    print("backup status for {}@{}* on {}/{}".format(
-        filesystem, snapshot_prefix, bucket.name, s3_prefix))
-    prefix = "{}@{}".format(filesystem, snapshot_prefix)
+    print(f"backup status for {filesystem}@{snapshot_prefix}* on {bucket.name}/{s3_prefix}")
+    prefix = f"{filesystem}@{snapshot_prefix}"
     pair_manager = PairManager(
         S3SnapshotManager(bucket, s3_prefix=s3_prefix, snapshot_prefix=prefix),
         ZFSSnapshotManager(fs_name=filesystem, snapshot_prefix=snapshot_prefix))
@@ -551,8 +549,8 @@ def parse_args():
     )
     parser.add_argument('--s3-prefix',
                         dest='s3_prefix',
-                        default=cfg.get('S3_PREFIX', 'zfs3backup-backup/'),
-                        help='S3 key prefix, defaults to zfs3backup-backup/')
+                        default=cfg.get('S3_PREFIX', 'zfs3backup/'),
+                        help='S3 key prefix, defaults to zfs3backup/')
     parser.add_argument('--filesystem', '--dataset',
                         dest='filesystem',
                         default=cfg.get('FILESYSTEM'),
@@ -562,6 +560,15 @@ def parse_args():
                         default=None,
                         help=('Only operate on snapshots that start with this prefix. '
                               'Defaults to zfs-auto-snap:daily.'))
+    parser.add_argument('--aws-profile',
+                        dest='aws_profile',
+                        default='default',
+                        help=('Choose a non default ~/.aws/config profile '))
+    parser.add_argument('--endpoint',
+                        dest='s3_endpoint_url',
+                        default='aws',
+                        help=('Choose a non AWS endpoint (e.g. Wasabi)'))
+                                     
     subparsers = parser.add_subparsers(help='sub-command help', dest='subcommand')
 
     backup_parser = subparsers.add_parser(
@@ -603,12 +610,17 @@ def main():
         bucket = cfg['BUCKET']
 
     except KeyError as err:
-        sys.stderr.write("Configuration error! {} is not set.\n".format(err))
+        sys.stderr.write(f"Configuration error! {err} is not set.\n")
         sys.exit(1)
-    s3 = boto3.resource(service_name='s3',endpoint_url=cfg['ENDPOINT'])
+    if cfg['ENDPOINT']== 'aws':   # boto3.resource makes an intelligent decision with the default url
+        s3 = boto3.Session(profile_name=cfg['PROFILE']).resource('s3')
+    else:
+        s3 = boto3.Session(profile_name=cfg['PROFILE']).resource('s3',endpoint_url=cfg['ENDPOINT'])
+        
     bucket = s3.Bucket(bucket)
+    
 
-    fs_section = "fs:{}".format(args.filesystem)
+    fs_section = f"fs:{args.filesystem}"
     if args.snapshot_prefix is None:
         snapshot_prefix = cfg.get("SNAPSHOT_PREFIX", section=fs_section)
     else:

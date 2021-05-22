@@ -30,7 +30,11 @@ VERB_QUIET = 0
 VERB_NORMAL = 1
 VERB_PROGRESS = 2
 
-s3 = boto3.resource('s3',endpoint_url=CFG['ENDPOINT'])
+if cfg['ENDPOINT']== 'aws':   # boto3.resource makes an intelligent decision with the default url
+    s3 = boto3.Session(profile_name=cfg['PROFILE']).resource('s3')
+else:
+    s3 = boto3.Session(profile_name=cfg['PROFILE']).resource('s3',endpoint_url=cfg['ENDPOINT'])
+
 
 def multipart_etag(digests):
     """

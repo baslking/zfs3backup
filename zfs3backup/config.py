@@ -10,7 +10,7 @@ _onion_dict_guard = object()
 
 
 class OnionDict(object):
-    """Wrapps multiple dictionaries. Tries to read data from each dict
+    """Wraps multiple dictionaries. Tries to read data from each dict
     in turn.
     Used to implement a fallback mechanism.
     """
@@ -50,11 +50,11 @@ class OnionDict(object):
 def get_config():
     global _settings
     if _settings is None:
-        _config = configparser.ConfigParser()
-        default = os.path.join(zfs3backup.__path__[0], "zfs3backup.conf")
+        _config = configparser.ConfigParser()  # Start with the installation directory 
+        default = os.path.join(zfs3backup.__path__[0], "zfs3backup.conf") 
         _config.read(default)
         if os.environ.get('SKIP_CONFIG_FILE', 'false').lower() != 'true':
-            _config.read("/etc/zfs3backup_backup/zfs3backup.conf")
+            _config.read("./zfs3backup/zfs3backup.conf")  #BK tweak for debug of parameters
         layers = [
             os.environ,  # env variables take precedence
             dict((k.upper(), v) for k, v in _config.items("main")),
