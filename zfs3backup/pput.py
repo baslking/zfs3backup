@@ -292,9 +292,9 @@ def parse_metadata(metadata):
 
 def optimize_chunksize(estimated):
     max_parts = 9999  # S3 requires part indexes to be between 1 and 10000
-    # part size has to be at least 5MB  (BK I pumped this up to 25MB and dropped the concurrency)
+    # part size has to be at least 5MB  (BK I tried this up to 10MB and dropped the concurrency)
     estimated = estimated * 1.05  # just to be on the safe side overesimate the total size to upload
-    min_part_size = max(estimated / max_parts, 25*1024*1024)
+    min_part_size = max(estimated / max_parts, 10*1024*1024)
     return int(min_part_size)
 
 
