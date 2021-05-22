@@ -34,7 +34,7 @@ def snapshots_to_send(source_snaps, dest_snaps):
         if snap == last_remote:
             # found a common snapshot
             return last_remote, source_snaps[-1]
-    # sys.stderr.write("source:'{}', dest:'{}'".format(source_snaps, dest_snaps))
+    # sys.stderr.write(f"source:'{source_snaps}', dest:'{dest_snaps}'")
     raise AssertionError("Latest snapshot on destination doesn't exist on source!")
 
 
@@ -44,25 +44,22 @@ def prepare_commands(from_snap, to_snap, filesystem, dry_run=False):
             print("Nothing to do here.")
         return
     if from_snap is None:
-        send_cmd = "zfs send {}".format(to_snap)
+        send_cmd = f"zfs send {to_snap}"
     else:
-        send_cmd = "zfs send -I {} {}".format(from_snap, to_snap)
+        send_cmd = f"zfs send -I {from_snap} {to_snap}"
     dry = 'nv' if dry_run else ''
-    recv_cmd = "zfs recv -d{dry} {}".format(
-        filesystem, dry=dry)
+    recv_cmd = f"zfs recv -d{dry} {filesystem}"
     return send_cmd, recv_cmd
 
 
 def send_snapshots(send_cmd, recv_cmd, remote_addr):
-    recv_cmd = "ssh {} -C 'mbuffer -s 128k -m 200m -q | sudo {}'".format(
-        remote_addr, recv_cmd)
+    recv_cmd = f"ssh {remote_addr} -C 'mbuffer -s 128k -m 200m -q | sudo {recv_cmd}'"
     return send_cmd, recv_cmd
 
 
 def pull_snapshots(send_cmd, recv_cmd, remote_addr):
-    send_cmd = "ssh {} -C 'sudo {}'".format(
-        remote_addr, send_cmd)
-    recv_cmd = "mbuffer -s 128k -m 200m -q | {}".format(recv_cmd)
+    send_cmd = f"ssh {remote_addr} -C 'sudo {send_cmd}'"
+    recv_cmd = "mbuffer -s 128k -m 200m -q | {recv_cmd}"
     return send_cmd, recv_cmd
 
 
@@ -70,8 +67,8 @@ def sync_snapshots(pair, local_fs, remote_fs, remote_addr, pull, dry_run):
     from_snap, to_snap = pair
     target_fs = local_fs if pull else remote_fs
     source_fs = remote_fs if pull else local_fs
-    from_snap = "{}@{}".format(source_fs, from_snap) if from_snap is not None else None
-    to_snap = "{}@{}".format(source_fs, to_snap)
+    from_snap = f"{source_fs}@{from_snap}" if from_snap is not None else None
+    to_snap = f"{source_fs}@{to_snap}"
     cmd_pair = prepare_commands(
         from_snap,
         to_snap,
