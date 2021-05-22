@@ -41,7 +41,7 @@ apt-get install pigz
 Most options can be configured as command line flags, environment variables or in a config file,
 in that order of precedence.
 The config file is read from `/etc/zfs3backup_backup/zfs3backup.conf` if it exists, some defaults are provided by the tool.
-For a list of all options see `zfs3backup/sample.conf`.
+For a list of all options see `zfs3backup/sample.conf`.  *this isn't up to date*
 
 You'll usually want zfs3backup to only backup certain snapshots (hourly/daily/weekly).
 To do that you can specify a `SNAPSHOT_PREFIX` (defaults to `zfs-auto-snap:daily`).
@@ -60,6 +60,14 @@ SNAPSHOT_PREFIX=weekly-non-spam
 
 This package uses boto3's standard credential chain for s3 credentials see: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html
 
+Additionally the profile can now be chosen --aws-profile and the option has been added to
+set a non standard S3 endpoint, like Wasabi.  --endpoint
+
+```
+PROFILE=myspecialawsprofile
+ENDPOINT=https://s3.wasabisys.com
+
+```
 ### Dataset Size, Concurrency and Memory Usage
 Since the data is streamed from `zfs send` it gets read in to memory in chunks.
 zfs3backup estimates a good chunk size for you: no smaller than 5MB and large enough
