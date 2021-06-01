@@ -54,7 +54,7 @@ def get_config():
         default = os.path.join(zfs3backup.__path__[0], "zfs3backup.conf") 
         _config.read(default)
         if os.environ.get('SKIP_CONFIG_FILE', 'false').lower() != 'true':
-            _config.read("./zfs3backup/zfs3backup.conf")  #BK tweak for debug of parameters
+            _config.read("/etc/zfs3backup/zfs3backup.conf")  #BK tweak for debug of parameters
         layers = [
             os.environ,  # env variables take precedence
             dict((k.upper(), v) for k, v in _config.items("main")),
