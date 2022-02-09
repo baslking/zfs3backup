@@ -13,11 +13,11 @@ def cleanup_multipart(bucket, max_days=1, dry_run=False):
     for multi in bucket.list_multipart_uploads():
         delta = now-boto.utils.parse_ts(multi.initiated)
         if delta.total_seconds() >= max_age_seconds:
-            print f"{'X'} | {multi.key_name:30} | {multi.initiated:20}"
+            print(f"{'X'} | {multi.key_name:30} | {multi.initiated:20}")
             if not dry_run:
                 multi.cancel_upload()
         else:
-            print f"{' '} | {multi.key_name:30} | {multi.initiated:20}"
+            print(f"{' '} | {multi.key_name:30} | {multi.initiated:20}")
 
 
 def main():

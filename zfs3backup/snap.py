@@ -348,7 +348,7 @@ class PairManager(object):
         if parent is None:
             meta.append("isfull=true")
         else:
-            meta.append("parent={parent}")
+            meta.append(f"parent={parent}")
         if self.compressor is not None:
             meta.append(f"compressor={self.compressor}")
         return f"pput --quiet --estimated {estimated} {' '.join('--meta '+m for m in meta)} {s3_prefix}{snap_name}"
