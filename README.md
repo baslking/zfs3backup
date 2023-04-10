@@ -24,7 +24,7 @@ zfs dataset.
 See `zfs SUBCOMMAND --help` for more info.
 
 ### Installing locally
-python setup.py install`
+python setup.py install
 
 zfs3backup is tested on python 3.10.
 
