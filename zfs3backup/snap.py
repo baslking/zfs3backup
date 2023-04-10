@@ -472,12 +472,12 @@ def _prepare_line(s3_snap, z_snap):
         name = s3_snap.name.split('@', 1)[1]
         local_state = 'ok' if z_snap is not None else 'missing'
         size = _humanize(s3_snap.uncompressed_size) if s3_snap.uncompressed_size is not None else ''
-    print(name, parent_name, snap_type, health, local_state, size)
+    #print(name, parent_name, snap_type, health, local_state, size)
     return (name, parent_name, snap_type, health, local_state, size)
 
 
 def list_snapshots(bucket, s3_prefix, filesystem, snapshot_prefix):
-    print(f"backup status for {filesystem}@{snapshot_prefix}* on {bucket.name}/{s3_prefix}")
+    print(f"Checking backup status for: {filesystem}@{snapshot_prefix}* on bucket: {bucket.name}/{s3_prefix}\n")
     prefix = f"{filesystem}@{snapshot_prefix}"
     pair_manager = PairManager(
         S3SnapshotManager(bucket, s3_prefix=s3_prefix, snapshot_prefix=prefix),
