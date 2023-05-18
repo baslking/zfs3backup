@@ -416,7 +416,7 @@ class PairManager(object):
             return
         current_snap = self.s3_manager.get(snap_name)
         if current_snap is None:
-            raise Exception(f"no such snapshot '{snap_name}'")
+            raise Exception(f'Sorry, no such snapshot: {snap_name}')
         to_restore = []
         while True:
             z_snap = self.zfs_manager.get(current_snap.name)
@@ -513,11 +513,11 @@ def do_backup(bucket, s3_prefix, filesystem, snapshot_prefix, full, snapshot, co
 
 
 def restore(bucket, s3_prefix, filesystem, snapshot_prefix, snapshot, dry, force):
-    prefix = "{filesystem}@{snapshot_prefix}"
+    prefix = f'{filesystem}@{snapshot_prefix}'
     s3_mgr = S3SnapshotManager(bucket, s3_prefix=s3_prefix, snapshot_prefix=prefix)
     zfs_mgr = ZFSSnapshotManager(fs_name=filesystem, snapshot_prefix=snapshot_prefix)
     pair_manager = PairManager(s3_mgr, zfs_mgr)
-    snap_name = "{filesystem}@{snapshot}"
+    snap_name = f'{filesystem}@{snapshot_prefix}{snapshot}'
     pair_manager.restore(snap_name, dry_run=dry, force=force)
 
 
@@ -568,10 +568,9 @@ def parse_args():
     incremental_group.add_argument(
         '--incremental', dest='incremental', default=True, action='store_true',
         help='Perform incremental backup; this is the default')
-
-    restore_parser = subparsers.add_parser('restore', help='not implemented')
+    restore_parser = subparsers.add_parser('restore', help='Restore from a snapshot')
     restore_parser.add_argument(
-        'snapshot', help='Snapshot to backup. Defaults to latest.')
+        'snapshot', help='Snapshot to restore. Defaults to latest.')
     restore_parser.add_argument('--dry-run', dest='dry', default=False, action='store_true',
                                 help='Dry run.')
     restore_parser.add_argument('--force', dest='force', default=False, action='store_true',
@@ -599,7 +598,7 @@ def main():
     bucket = s3.Bucket(bucket)
     
 
-    fs_section = f"fs:{args.filesystem}"
+    fs_section = f'fs:{args.filesystem}'
     if args.snapshot_prefix is None:
         snapshot_prefix = cfg.get("SNAPSHOT_PREFIX", section=fs_section)
     else:
