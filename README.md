@@ -27,15 +27,16 @@ zfs dataset.
 See `zfs SUBCOMMAND --help` for more info.
 
 ### Installing locally
+```
 python setup.py install
-
+```
 zfs3backup is tested on python 3.10-3.13
 
 #### Optional dependencies
 * Install `pv` to get some progress indication while uploading.
 * Install `pigz` to provide the pigz compressors.
 
-E.G:
+Something like:
 ```
 apt-get install pv pigz
 ```
