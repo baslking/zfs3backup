@@ -6,7 +6,10 @@ This was forked from https://github.com/mmontagna/zfs3backup which was forked fr
 * Ported to Python >= 3.6, after all Python 2 is really no longer supported
 * Added an ENDPOINT option in the configuration so that not AWS S3 providers will work
 * Began work on more complete error handling since broken pipes, bad credentials and insufficient privileges are not handled
-
+* AWS has now defaulted to integrity checks during multipart uploads by calculating and validating checksums, this has not been implemented here
+  because it tends to break on non AWS S3 implementations. Boto as of 1.36.23 defaults to doing integrity checks and for now I have 
+  simply turned it off via a custom config option on Boto. 
+  
 # Welcome to zfs3backup
 
 zfs3backup is a ZFS to S3 backup tool. This is basically plumbing around `zfs send` and `zfs receive`
@@ -26,17 +29,20 @@ See `zfs SUBCOMMAND --help` for more info.
 ### Installing locally
 python setup.py install
 
-zfs3backup is tested on python 3.10.
+zfs3backup is tested on python 3.10-3.13
 
 #### Optional dependencies
-```
-# Install pv to get some progress indication while uploading.
-apt-get install pv
+* Install `pv` to get some progress indication while uploading.
+* Install `pigz` to provide the pigz compressors.
 
-# Install pigz to provide the pigz compressors.
-apt-get install pigz
+E.G:
 ```
-
+apt-get install pv pigz
+```
+or
+```
+pacman -S pv pigz
+```
 ### Configuring
 Most options can be configured as command line flags, environment variables or in a config file,
 in that order of precedence.
