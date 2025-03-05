@@ -19,6 +19,13 @@ import os
 import sys
 
 import boto3
+from botocore.config import Config
+
+# Create a custom configuration required for Boto > 1.36 on Wasabi
+no_check_config = Config(
+    request_checksum_calculation='when_required',
+    response_checksum_validation='when_required'
+)
 
 
 from zfs3backup.config import get_config
@@ -30,10 +37,11 @@ VERB_QUIET = 0
 VERB_NORMAL = 1
 VERB_PROGRESS = 2
 #print(f"here we print the Endpoint to check {cfg['ENDPOINT']}")
+session=boto3.Session(profile_name=CFG['PROFILE'])
 if CFG['ENDPOINT'] == 'aws':   # boto3.resource makes an intelligent decision with the default url
-    s3 = boto3.Session(profile_name=CFG['PROFILE']).resource('s3')
+    s3 = session.resource('s3', config=no_check_config)
 else:
-    s3 = boto3.Session(profile_name=CFG['PROFILE']).resource('s3',endpoint_url=CFG['ENDPOINT'])
+    s3 = session.resource('s3', endpoint_url=CFG['ENDPOINT'],config=no_check_config)
 
 
 def multipart_etag(digests):

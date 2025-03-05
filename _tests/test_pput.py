@@ -51,7 +51,7 @@ def sample_data():
                 data.write(
                     "".join(cc+chars[i] for i in xrange(256))
                 )
-        print "wrote {} MB" .format(data.tell() / 1024.0 / 1024.0)
+        print("wrote {} MB" .format(data.tell() / 1024.0 / 1024.0))
         # give the test a read-only file to avoid accidentally modifying the data between tests
         _cached_sample_data = ReadOnlyFile(data)
     _cached_sample_data.seek(0)
